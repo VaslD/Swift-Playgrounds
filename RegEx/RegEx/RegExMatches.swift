@@ -4,16 +4,28 @@ import Foundation
 ///
 /// - Tag: RegExMatches
 ///
+/// 优势：
 /// - 通过 `Sequence` 协议支持 for-in 循环和 `enumerated {}`, `forEach {}`, etc.
 /// - 通过 `Collection` 协议支持下标 (`[i]`) 调用
 /// - `RegExMatches.asArray()` 可以转换成 `[RegExMatch]` 数组
+///
+/// **注意：某些构建方法可能会需要长时间执行。**
 public class RegExMatches: IteratorProtocol, Sequence, Collection {
     private let matches: [NSTextCheckingResult]
     private let text: String
 
     private var current: Int = 0
     private var cache: [RegExMatch?]
-
+    
+    /// 匹配 RegEx 并封装结果
+    ///
+    /// **警告：此构造方法将完整执行一次 RegEx 匹配，可能需要长时间执行。**
+    ///
+    /// - Parameters:
+    ///   - regEx: `NSRegularExpression` 实例
+    ///   - options: 附加规则，可选
+    ///   - range: 匹配区间，可选
+    ///   - text: 被检查的字符串
     public init(match regEx: NSRegularExpression,
                 with options: NSRegularExpression.MatchingOptions = [],
                 for range: Range<String.Index>? = nil,
@@ -24,7 +36,11 @@ public class RegExMatches: IteratorProtocol, Sequence, Collection {
         self.text = text
         self.cache = [RegExMatch?](repeating: nil, count: self.matches.count)
     }
-
+    
+    /// 通过 RegEx 匹配结果构建封装
+    /// - Parameters:
+    ///   - matches: 匹配结果
+    ///   - text: 原始字符串
     public init?(for matches: [NSTextCheckingResult], in text: String) {
         guard matches.allSatisfy({ (match) -> Bool in
             match.resultType == .regularExpression
@@ -97,11 +113,6 @@ public class RegExMatches: IteratorProtocol, Sequence, Collection {
     ///
     /// - Returns: `[RegExMatch]` 数组
     public func asArray() -> [RegExMatch] {
-        let compactArray = self.cache.compactMap { $0 }
-        if compactArray.count == self.matches.count {
-            return compactArray
-        }
-
         self.cache = self.matches.map { match in
             RegExMatch(for: match, in: self.text)
         }

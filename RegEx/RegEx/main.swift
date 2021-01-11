@@ -45,7 +45,7 @@ print()
 if let regex = RegEx(pattern: pattern) {
     regex.matches(in: text).asArray().forEach { match in
         print("Match:")
-        match.groups.asMap().forEach { key, value in
+        match.groups.asMap().forEach { _, value in
             print("   Capture: \(value)")
         }
     }
@@ -67,6 +67,33 @@ if let regex = RegEx(pattern: pattern) {
         for capture in match.groups {
             print("   Capture: \(capture.string)")
         }
+    }
+}
+
+print()
+print("Advanced usage...")
+print()
+
+if let regex = RegEx(pattern: pattern) {
+    regex.enumerateMatches(in: text, with: [.reportProgress, .reportCompletion]) { (match, flags) -> Bool in
+        if let match = match {
+            print("Match:")
+            for capture in match.groups {
+                print("   Capture: \(capture.string)")
+            }
+            
+            // I just want the first match.
+            return true
+        }
+        
+        if flags.contains(.progress) {
+            // Will probably execute on slow computers.
+            print("Matching in progress...")
+        } else if flags.contains(.completed) || flags.contains(.hitEnd) {
+            // Will never execute due to interruption.
+            print("Matching completed.")
+        }
+        return false
     }
 }
 

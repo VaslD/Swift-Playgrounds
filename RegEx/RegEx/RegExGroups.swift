@@ -1,13 +1,16 @@
 import Foundation
 
-/// `NSTextCheckingResult` 封装，用于提供 `NSRegularExpression` 匹配结果
+/// `NSTextCheckingResult` 封装，用于提供匹配结果
 ///
 /// - Tag: RegExGroups
 ///
+/// 优势：
 /// - 通过 `Sequence` 协议支持 for-in 循环和 `enumerated {}`, `forEach {}`, etc.
 /// - 通过 `Collection` 协议支持下标 (`[i]`) 调用
-/// - `RegExGroups.asArray()` 可以转换成 `[RegExGroup]` 数组
-/// - `RegExGroups.asMap()` 可以转换成 `[(Range<String.Index>, String)]` 键值数组
+/// - `RegExGroups.asArray()` 可以转换成 `[RegExGroup]`
+/// - `RegExGroups.asMap()` 可以转换成 `[(Range<String.Index>, String)]`
+///
+/// 这是一个惰性封装，没有被请求的匹配不会被提取。
 public class RegExGroups: IteratorProtocol, Sequence, Collection {
     private let match: NSTextCheckingResult
     private let text: String

@@ -9,6 +9,8 @@ import Foundation
 /// 封装的结果，方便使用遍历、映射和取值语法
 /// - 提供类型函数，无需实例化快速匹配 RegEx 和指定字符串并获取捕获结果
 public class RegEx {
+    public typealias EnumerationBlock = (RegExMatch?, NSRegularExpression.MatchingFlags) -> Bool
+
     /// 被封装的 `NSRegularExpression` 类型
     private let regex: NSRegularExpression
 
@@ -82,6 +84,8 @@ public class RegEx {
     ///
     /// 无论是否提供附加规则，适用的全局匹配规则都会生效。
     ///
+    /// **警告：此方法将完整执行一次 RegEx 匹配并返回结果，可能需要长时间执行。**
+    ///
     /// - Parameters:
     ///   - text: 被检查的字符串
     ///   - options: 附加规则（可选）
@@ -96,6 +100,8 @@ public class RegEx {
     ///
     /// 无论是否提供附加规则，适用的全局匹配规则都会生效。
     ///
+    /// **警告：此方法将完整执行一次 RegEx 匹配并返回结果，可能需要长时间执行。**
+    ///
     /// - Parameters:
     ///   - text: 被检查的字符串
     ///   - options: 附加规则，如果没有需提供 `[]`
@@ -106,6 +112,54 @@ public class RegEx {
                         for range: Range<String.Index>) -> RegExMatches
     {
         RegExMatches(match: self.regex, with: options, for: range, in: text)
+    }
+
+    /// 枚举每次 RegEx 匹配并执行回调
+    ///
+    /// 回调接收封装的 `RegExMatch` 和本次匹配的 `NSRegularExpression.MatchingFlags`，并需要返回 `Bool` 示意是否终止匹配。
+    ///
+    /// 回调频率和可取得的值取决于匹配进度和附加规则，请参阅
+    /// `NSRegularExpression.enumerateMatches(in:options:range:using:)`。
+    ///
+    /// - Parameters:
+    ///   - text: 被检查的字符串
+    ///   - options: 附加规则（可选）
+    ///   - block: 回调闭包
+    public func enumerateMatches(in text: String,
+                                 with options: NSRegularExpression.MatchingOptions = [],
+                                 using block: EnumerationBlock)
+    {
+        let range = text.startIndex ..< text.endIndex
+        self.enumerateMatches(in: text, with: options, for: range, using: block)
+    }
+
+    /// 枚举每次 RegEx 匹配并执行回调
+    ///
+    /// 回调接收封装的 `RegExMatch` 和本次匹配的 `NSRegularExpression.MatchingFlags`，并需要返回 `Bool` 示意是否终止匹配。
+    ///
+    /// 回调频率和可取得的值取决于匹配进度和附加规则，请参阅
+    /// `NSRegularExpression.enumerateMatches(in:options:range:using:)`。
+    ///
+    /// - Parameters:
+    ///   - text: 被检查的字符串
+    ///   - options: 附加规则，如果没有需提供 `[]`
+    ///   - range: 检查区间
+    ///   - block: 回调闭包
+    public func enumerateMatches(in text: String,
+                                 with options: NSRegularExpression.MatchingOptions,
+                                 for range: Range<String.Index>,
+                                 using block: EnumerationBlock)
+    {
+        let bounds = NSRange(range, in: text)
+        self.regex.enumerateMatches(in: text, options: options, range: bounds) { result, flags, shouldStop in
+            let match: RegExMatch?
+            if let result = result {
+                match = RegExMatch(for: result, in: text)
+            } else {
+                match = nil
+            }
+            shouldStop.pointee = ObjCBool(block(match, flags))
+        }
     }
 }
 
@@ -184,6 +238,8 @@ public extension RegEx {
 
     /// 在指定字符串中匹配 RegEx 并取得捕获结果
     ///
+    /// **警告：此方法将完整执行一次 RegEx 匹配并返回结果，可能需要长时间执行。**
+    ///
     /// - Parameters:
     ///   - pattern: RegEx 表达式
     ///   - regExOptions: RegEx 全局匹配规则
@@ -202,6 +258,8 @@ public extension RegEx {
 
     /// 在指定字符串中匹配 RegEx 并取得捕获结果
     ///
+    /// **警告：此方法将完整执行一次 RegEx 匹配并返回结果，可能需要长时间执行。**
+    ///
     /// - Parameters:
     ///   - regEx: `NSRegularExpression` 实例
     ///   - matchingOptions: 附加规则
@@ -216,6 +274,8 @@ public extension RegEx {
     }
 
     /// 在指定字符串中指定区间匹配 RegEx 并取得捕获结果
+    ///
+    /// **警告：此方法将完整执行一次 RegEx 匹配并返回结果，可能需要长时间执行。**
     ///
     /// - Parameters:
     ///   - pattern: RegEx 表达式
@@ -236,6 +296,8 @@ public extension RegEx {
     }
 
     /// 在指定字符串中指定区间匹配 RegEx 并取得捕获结果
+    ///
+    /// **警告：此方法将完整执行一次 RegEx 匹配并返回结果，可能需要长时间执行。**
     ///
     /// - Parameters:
     ///   - regEx: `NSRegularExpression` 实例
