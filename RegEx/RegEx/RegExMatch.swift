@@ -15,14 +15,14 @@ public struct RegExMatch {
         self.string = string
         self.groups = groups
     }
-    
+
     public init?(for match: NSTextCheckingResult, in text: String) {
         guard match.resultType == .regularExpression else {
             return nil
         }
-        
+
         self.groups = RegExGroups(for: match, in: text)!
         self.range = Range(match.range, in: text)!
-        self.string = String(text[range])
+        self.string = String(text[self.range])
     }
 }

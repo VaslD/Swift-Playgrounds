@@ -1,9 +1,12 @@
 import Foundation
 
-#if canImport(UIKit)
-import UIKit
-#endif
-
+/// `NSRegularExpression` 和 `NSTextCheckingResult` 封装，用于提供 `NSRegularExpression` 匹配结果
+///
+/// - Tag: RegExMatches
+///
+/// - 通过 `Sequence` 协议支持 for-in 循环和 `enumerated {}`, `forEach {}`, etc.
+/// - 通过 `Collection` 协议支持下标 (`[i]`) 调用
+/// - `RegExMatches.asArray()` 可以转换成 `[RegExMatch]` 数组
 public class RegExMatches: IteratorProtocol, Sequence, Collection {
     private let matches: [NSTextCheckingResult]
     private let text: String
@@ -20,12 +23,6 @@ public class RegExMatches: IteratorProtocol, Sequence, Collection {
         self.matches = regEx.matches(in: text, options: options, range: bounds)
         self.text = text
         self.cache = [RegExMatch?](repeating: nil, count: self.matches.count)
-
-        #if canImport(UIKit)
-        NotificationCenter.default.addObserver(self, selector: #selector(self.cleanup),
-                                               name: UIApplication.didReceiveMemoryWarningNotification,
-                                               object: UIApplication.shared)
-        #endif
     }
 
     public init?(for matches: [NSTextCheckingResult], in text: String) {
@@ -38,19 +35,20 @@ public class RegExMatches: IteratorProtocol, Sequence, Collection {
         self.matches = matches
         self.text = text
         self.cache = [RegExMatch?](repeating: nil, count: matches.count)
-
-        #if canImport(UIKit)
-        NotificationCenter.default.addObserver(self, selector: #selector(self.cleanup),
-                                               name: UIApplication.didReceiveMemoryWarningNotification,
-                                               object: UIApplication.shared)
-        #endif
     }
 
     // MARK: Sequence
 
+    /// 用于 `IteratorProtocol`，不建议直接调用
+    /// - Returns: 集合中下一个 `RegExMatch`
     public func next() -> RegExMatch? {
         guard self.matches.indices.contains(self.current) else {
             return nil
+        }
+
+        if let cached = cache[current] {
+            self.current += 1
+            return cached
         }
 
         let match = self.matches[self.current]
@@ -89,14 +87,15 @@ public class RegExMatches: IteratorProtocol, Sequence, Collection {
         return RegExMatch(for: match, in: self.text)!
     }
 
-    // MARK: Maintenance
+    // MARK: - 类型转换
 
-    @objc func cleanup() {
-        self.cache = [RegExMatch?](repeating: nil, count: self.matches.count)
-    }
-
-    // MARK: Casts
-
+    /// 将本集合转换为 `RegExMatch` 数组
+    ///
+    /// 调用时将遍历 `[NSTextCheckingResult]` 中所有匹配结果，并使用每次匹配的基本信息生成 `[RegExMatch]`。
+    ///
+    /// 遍历结果将被缓存，加速下次单结果取值速度，例如 `RegExMatches.next()` 和 `RegExMatches.subscript(position:)`；但不会影响后续 `RegExMatches.asArray()` 取值速度，因为在 Swift 中，取得上次遍历所有非空结果的代价更大。
+    ///
+    /// - Returns: `[RegExMatch]` 数组
     public func asArray() -> [RegExMatch] {
         let compactArray = self.cache.compactMap { $0 }
         if compactArray.count == self.matches.count {
